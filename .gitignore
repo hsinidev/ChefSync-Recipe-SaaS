@@ -1,0 +1,16 @@
+﻿node_modules/
+vendor/
+.env
+*.zip
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.phar
+vps_out/
+vps_outside/
+vps_public_html/
+storage/logs/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+*.log

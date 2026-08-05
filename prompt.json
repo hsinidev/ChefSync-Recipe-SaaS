@@ -1,0 +1,221 @@
+{
+  "prompt_metadata": {
+    "target_model": "Senior Software Architect & Full-Stack Engineer AI",
+    "objective": "Generate a production-ready, hyper-scalable, secure multi-tenant codebase, resilient API integrations, and robust database design for the ChefSync SaaS platform.",
+    "frameworks_and_language_spec": {
+      "backend": "Laravel 12.x, PHP 8.4 (utilizing strict typing, property hooks, constructor property promotion, typed class constants, and asynchronous fiber-ready architectures)",
+      "frontend": "TailwindCSS v4 (using the @theme directive and compiled natively via Vite), Alpine.js v3 (reactive micro-states with proxy objects), Blade UI Components",
+      "databases": "MySQL 8.4 (InnoDB engine, explicit compound indexing, page-compressed tables, row-level locks), Redis 7.2 (asymmetric cache partitioning, transactional locks, FIFO queues)"
+    }
+  },
+  "architectural_standards": {
+    "multi_tenancy": {
+      "strategy": "Hybrid Tenancy Model",
+      "multi_database": {
+        "description": "High-tier enterprise restaurant accounts are allocated isolated, dedicated databases for optimal data sovereignty and performance isolation.",
+        "tenant_resolver_pipeline": [
+          "Intercept request in Early Middleware",
+          "Match request()->getHost() against wildcard subdomains or mapped custom domains in Redis Cache-Aside pool",
+          "If Cache Miss: Query master database, store connection config encrypted using AES-256-GCM in Redis, set TTL to 86400s",
+          "Dynamically purge existing 'tenant' database connection pool",
+          "Re-inject resolved credentials into 'database.connections.tenant'",
+          "Force reconnect and boot tenant DB context"
+        ],
+        "schema_migration_strategy": "Iterative migration runner via customized console command 'tenants:migrate' executing migrations sequentially inside transaction blocks with dynamic connection safeguards to prevent master database schema pollution."
+      },
+      "single_database": {
+        "description": "Lower-tier dynamic culinary blogs share a single database, isolated logically via Global Query Scopes.",
+        "implementation": "Global TenantScope trait applied to all tenant-scoped Eloquent models (e.g., Recipe, Ingredient, Category, Tag).",
+        "tenant_column": "tenant_uuid (BINARY-16 representation of UUIDv4 for high-efficiency indexed lookup, avoiding slow char-36 operations)"
+      }
+    },
+    "database_schema_and_optimization": {
+      "database_engines": "InnoDB with page compression enabled on large recipes, instructions, and audit log tables.",
+      "schema_definitions": {
+        "tenants": {
+          "columns": {
+            "id": "BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+            "uuid": "BINARY(16) UNIQUE NOT NULL",
+            "name": "VARCHAR(255) NOT NULL",
+            "domain": "VARCHAR(255) UNIQUE NOT NULL",
+            "uses_isolated_db": "TINYINT(1) DEFAULT 0",
+            "db_config": "TEXT NULL (Encrypted JSON: host, database, username, password)",
+            "billing_plan": "VARCHAR(50) DEFAULT 'free'",
+            "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "updated_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+          },
+          "indexes": [
+            "INDEX idx_domain (domain)",
+            "INDEX idx_uuid (uuid)"
+          ]
+        },
+        "recipes": {
+          "columns": {
+            "id": "BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+            "tenant_uuid": "BINARY(16) NOT NULL",
+            "author_id": "BIGINT UNSIGNED NOT NULL",
+            "title": "VARCHAR(255) NOT NULL",
+            "slug": "VARCHAR(255) NOT NULL",
+            "excerpt": "TEXT NULL",
+            "prep_time_minutes": "SMALLINT UNSIGNED DEFAULT 0",
+            "cook_time_minutes": "SMALLINT UNSIGNED DEFAULT 0",
+            "servings": "SMALLINT UNSIGNED DEFAULT 4",
+            "status": "ENUM('draft', 'review', 'published') DEFAULT 'draft'",
+            "created_at": "TIMESTAMP NULL",
+            "updated_at": "TIMESTAMP NULL"
+          },
+          "indexes": [
+            "UNIQUE idx_tenant_slug (tenant_uuid, slug)",
+            "INDEX idx_tenant_status_created (tenant_uuid, status, created_at DESC)",
+            "FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE RESTRICT"
+          ]
+        },
+        "ingredients": {
+          "columns": {
+            "id": "BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+            "recipe_id": "BIGINT UNSIGNED NOT NULL",
+            "sort_order": "SMALLINT UNSIGNED DEFAULT 0",
+            "amount": "DECIMAL(8,2) UNSIGNED NOT NULL",
+            "unit": "VARCHAR(50) NOT NULL (e.g., 'grams', 'ml', 'cups', 'pcs')",
+            "name": "VARCHAR(255) NOT NULL",
+            "state": "VARCHAR(100) NULL (e.g., 'chopped', 'sifted')"
+          },
+          "indexes": [
+            "INDEX idx_recipe_ingredients (recipe_id, sort_order)",
+            "FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE"
+          ]
+        },
+        "recipe_steps": {
+          "columns": {
+            "id": "BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+            "recipe_id": "BIGINT UNSIGNED NOT NULL",
+            "step_number": "SMALLINT UNSIGNED NOT NULL",
+            "instruction": "TEXT NOT NULL",
+            "media_url": "VARCHAR(500) NULL"
+          },
+          "indexes": [
+            "UNIQUE idx_recipe_step (recipe_id, step_number)",
+            "FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE"
+          ]
+        }
+      },
+      "indexing_strategy": "Covers indexes designed for common API listing payloads. Explicitly prevent filesort by using matching compound indexes. Use covering indexes on frequent lookup queries to bypass secondary row lookups."
+    },
+    "caching_and_queues": {
+      "redis_topology": {
+        "cluster_a_sessions": "Dynamic high-speed state, rate-limiting counters, and session variables.",
+        "cluster_b_cache": "Asymmetric application-level storage. Stores pre-rendered recipe lists, site layouts, and custom tenant CSS configuration variables.",
+        "cluster_c_queues": "High-throughput Redis queues backing Laravel Horizon worker processes."
+      },
+      "cache_invalidation_matrix": {
+        "recipe_mutations": "On RecipeCreated, RecipeUpdated, or RecipeDeleted, trigger automatic targeted tags invalidation: ['tenant:{uuid}:recipes', 'recipe:{id}']. Avoid broad cache flushes.",
+        "tenant_mutations": "On TenantSettingsChanged, purge landing page layout caches immediately."
+      },
+      "horizon_queues": {
+        "critical": "Processes user authentication alerts, billing mutations, and transactional password-reset emails immediately.",
+        "media": "Asynchronous image compression, thumbnail resizing, WebP compilation, and background Unsplash asset downloads.",
+        "newsletter": "Postmark bulk recipe dispatch notifications running on throttle controls matching dynamic API limits."
+      }
+    }
+  },
+  "role_and_rbac_matrix": {
+    "super_admin": {
+      "scope": "Global System Core",
+      "abilities": [
+        "provision_tenant",
+        "deprovision_tenant",
+        "global_system_audit",
+        "emergency_db_repair",
+        "manage_global_billing"
+      ],
+      "prohibitions": []
+    },
+    "tenant_admin": {
+      "scope": "Tenant Database / Scoped Scope Boundary",
+      "abilities": [
+        "manage_recipes",
+        "publish_recipes",
+        "manage_taxonomies",
+        "invite_users",
+        "configure_integrations",
+        "customize_blog_theme",
+        "delete_recipe"
+      ],
+      "prohibitions": [
+        "bypass_tenant_boundaries",
+        "alter_system_billing_tier"
+      ]
+    },
+    "sous_chef": {
+      "scope": "Tenant Scoped Scope Boundary",
+      "abilities": [
+        "create_recipe_draft",
+        "edit_own_recipe_draft",
+        "upload_recipe_media",
+        "manage_taxonomy_inputs"
+      ],
+      "prohibitions": [
+        "publish_recipes_to_live",
+        "delete_any_recipe",
+        "alter_tenant_configurations",
+        "manage_tenant_users"
+      ]
+    }
+  },
+  "core_feature_specifications": {
+    "portion_scaler_and_recipe_builder": {
+      "backend": {
+        "storage": "Save base measurements inside a clean decimal system in the ingredients database table.",
+        "api_output": "Expose JSON structures featuring exact Float quantities, facilitating loss-free decimal conversions."
+      },
+      "frontend": {
+        "engine": "Alpine.js proxy objects evaluating state change reactively without sending HTTP payloads back to Laravel controllers.",
+        "features": "Continuous dynamic sizing of numbers based on a slider control, instant fraction formatting representation (e.g., converting 1.5 to '1 1/2'), and seamless real-time metric-to-imperial conversions."
+      }
+    },
+    "media_processing_pipeline": {
+      "engine": "GD/Imagick powered by Spatie Laravel-MediaLibrary, isolated into background queue workers.",
+      "processing_lifecycle": [
+        "Accept upload in controller, enforcing strict mime checks (image/jpeg, image/png, image/webp) and a maximum size limit of 8MB",
+        "Move original file immediately to temporary scratch disk",
+        "Dispatch high-priority background job containing temporary file path",
+        "Async worker optimization: Compress to WebP format, generating three specific responsive representations: Thumbnail (150x150, crop), Card (600x400, fit), Hero (1200x800, fit)",
+        "Stream finalized assets to secure local/S3 persistence layer",
+        "Clean temp scratch disk storage to prevent local storage bloat"
+      ]
+    },
+    "seo_schema_generator": {
+      "standard": "Schema.org/Recipe JSON-LD Standard",
+      "architecture": "Engineered via an independent backend service class ('RecipeSchemaService'). This class compiles relational attributes, ingredients arrays, instruction step pipelines, and rating data, then serializes the payload directly inside an cached string container inside Redis. blade components render the output inside structural HTML head slots."
+    },
+    "resilient_integrations": {
+      "unsplash_api": {
+        "purpose": "Automated discovery of beautiful cover imagery during recipe generation phases.",
+        "resilience_policy": "Wrapped within HTTP Client retry blocks using dynamic exponential backoffs. If rate-limited (HTTP 429), the application degrades gracefully by serving structured local fallback vectors."
+      },
+      "postmark_smtp": {
+        "purpose": "High-throughput newsletter delivery dispatching new recipe announcements to culinary blog subscribers.",
+        "dispatch_protocol": "Laravel job batching paired with rate-limiting middleware limits requests to max 50 concurrent connections, preventing IP-reputation issues."
+      }
+    }
+  },
+  "implementation_blueprints": {
+    "backend": {
+      "tenant_connection_middleware": "<?php\n\ndeclare(strict_types=1);\n\nnamespace App\\Http\\Middleware;\n\nuse Closure;\nuse App\\Models\\Tenant;\nuse Illuminate\\Http\\Request;\nuse Illuminate\\Support\\Facades\\Cache;\nuse Illuminate\\Support\\Facades\\Config;\nuse Illuminate\\Support\\Facades\\DB;\nuse Illuminate\\Support\\Facades\\Crypt;\nuse Illuminate\\Support\\Facades\\Schema;\nuse Symfony\\Component\\HttpFoundation\\Response;\n\nfinal readonly class TenantDatabaseResolver\n{\n    public function handle(Request $request, Closure $next): Response\n    {\n        $host = $request->getHost();\n\n        // Retrieve tenant metadata from persistent Redis cache layers\n        $tenant = Cache::remember(\"tenant:host:{$host}\", 86400, function () use ($host) {\n            return Tenant::where('domain', $host)->first();\n        });\n\n        if (!$tenant) {\n            abort(Response::HTTP_NOT_FOUND, 'The requested culinary blog does not exist on our servers.');\n        }\n\n        if ($tenant->uses_isolated_db) {\n            $config = json_decode(Crypt::decryptString($tenant->db_config), true, 512, JSON_THROW_ON_ERROR);\n            \n            Config::set('database.connections.tenant.host', $config['host']);\n            Config::set('database.connections.tenant.database', $config['database']);\n            Config::set('database.connections.tenant.username', $config['username']);\n            Config::set('database.connections.tenant.password', $config['password']);\n\n            DB::purge('tenant');\n            DB::reconnect('tenant');\n            \n            // Enforce schema checks\n            Schema::connection('tenant')->getConnection()->reconnect();\n        } else {\n            // Bind tenant context reference globally\n            TenantScope::setTenantId($tenant->uuid);\n        }\n\n        return $next($request);\n    }\n}",
+      "recipe_creation_service": "<?php\n\ndeclare(strict_types=1);\n\nnamespace App\\Services;\n\nuse App\\Models\\Recipe;\nuse Illuminate\\Support\\Facades\\DB;\nuse Illuminate\\Support\\Facades\\Http;\nuse Illuminate\\Support\\Facades\\Log;\nuse Exception;\n\nfinal class RecipeCreationService\n{\n    /**\n     * Handles atomic transactional recipe creation and hooks background image fetching pipelines.\n     */\n    public function createWithRelations(array $recipeData, array $ingredients, array $steps): Recipe\n    {\n        return DB::transaction(function () use ($recipeData, $ingredients, $steps) {\n            // 1. Create Base Recipe Model\n            $recipe = Recipe::create($recipeData);\n\n            // 2. Perform bulk insertion of related ingredients\n            $recipe->ingredients()->createMany(\n                array_map(fn ($ing, $index) => [\n                    'sort_order' => $index,\n                    'amount' => $ing['amount'],\n                    'unit' => $ing['unit'],\n                    'name' => $ing['name'],\n                    'state' => $ing['state'] ?? null\n                ], $ingredients, array_keys($ingredients))\n            );\n\n            // 3. Perform bulk insertion of instructions\n            $recipe->steps()->createMany(\n                array_map(fn ($step) => [\n                    'step_number' => $step['step_number'],\n                    'instruction' => $step['instruction']\n                ], $steps)\n            );\n\n            // 4. Asynchronously fetch Unsplash cover image if missing but keywords are provided\n            if (empty($recipeData['cover_image_url']) && !empty($recipeData['seo_keywords'])) {\n                $this->dispatchUnsplashCoverFetch($recipe);\n            }\n\n            return $recipe;\n        });\n    }\n\n    private function dispatchUnsplashCoverFetch(Recipe $recipe): void\n    {\n        // Dispatch media-processing job directly to Horizon media queue\n        dispatch(new \\App\\Jobs\\FetchUnsplashCoverJob($recipe))\n            ->onQueue('media');\n    }\n}"
+    },
+    "frontend": {
+      "alpine_portion_scaler": "<div x-data=\"{\n    servings: 4,\n    baseServings: 4,\n    ingredients: [\n        { name: 'Unbleached Bread Flour', qty: 500, unit: 'g' },\n        { name: 'Active Dry Yeast', qty: 7, unit: 'g' },\n        { name: 'Fine Sea Salt', qty: 10, unit: 'g' },\n        { name: 'Lukewarm Water', qty: 350, unit: 'ml' },\n        { name: 'Extra Virgin Olive Oil', qty: 1.5, unit: 'tbsp' }\n    ],\n    formatFraction(val) {\n        if (val % 1 === 0) return val.toString();\n        const tolerance = 0.05;\n        const decimal = val % 1;\n        const integer = Math.floor(val);\n        let fraction = '';\n        \n        if (Math.abs(decimal - 0.25) < tolerance) fraction = '1/4';\n        else if (Math.abs(decimal - 0.33) < tolerance || Math.abs(decimal - 0.3) < tolerance) fraction = '1/3';\n        else if (Math.abs(decimal - 0.5) < tolerance) fraction = '1/2';\n        else if (Math.abs(decimal - 0.66) < tolerance || Math.abs(decimal - 0.7) < tolerance) fraction = '2/3';\n        else if (Math.abs(decimal - 0.75) < tolerance) fraction = '3/4';\n        \n        if (fraction) {\n            return integer > 0 ? `${integer} ${fraction}` : fraction;\n        }\n        return val.toFixed(1).replace('.0', '');\n    }\n}\" class=\"max-w-md mx-auto p-6 bg-white border border-slate-200 rounded-3xl shadow-sm\">\n    \n    <div class=\"flex items-center justify-between pb-6 mb-6 border-b border-slate-100\">\n        <div>\n            <h3 class=\"text-lg font-bold text-slate-900 tracking-tight\">Ingredients Scaler</h3>\n            <p class=\"text-xs text-slate-500\">Adjust serving count to recalculate portions</p>\n        </div>\n        \n        <div class=\"flex items-center space-x-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100\">\n            <button \n                type=\"button\"\n                @click=\"if(servings > 1) servings--\" \n                class=\"w-8 h-8 flex items-center justify-center text-slate-700 bg-white hover:bg-slate-100 rounded-xl shadow-xs transition-all active:scale-95\">\n                −\n            </button>\n            <span x-text=\"servings\" class=\"text-base font-bold text-slate-900 w-8 text-center\"></span>\n            <button \n                type=\"button\"\n                @click=\"servings++\" \n                class=\"w-8 h-8 flex items-center justify-center text-slate-700 bg-white hover:bg-slate-100 rounded-xl shadow-xs transition-all active:scale-95\">\n                +\n            </button>\n        </div>\n    </div>\n\n    <ul class=\"space-y-3.5\">\n        <template x-for=\"(ing, index) in ingredients\" :key=\"index\">\n            <li class=\"flex items-center justify-between p-3 bg-slate-50/50 hover:bg-slate-50 border border-slate-100/50 rounded-2xl transition-colors\">\n                <span x-text=\"ing.name\" class=\"text-sm font-medium text-slate-700\"></span>\n                <span class=\"text-sm font-semibold text-emerald-600 tracking-tight\">\n                    <span x-text=\"formatFraction((ing.qty * servings) / baseServings)\"></span>\n                    <span x-text=\"ing.unit\" class=\"text-emerald-500/80 font-medium text-xs ml-0.5\"></span>\n                </span>\n            </li>\n        </template>\n    </ul>\n</div>"
+    }
+  },
+  "developer_output_requirements": {
+    "code_hygiene": [
+      "Strict type assertions (declare(strict_types=1);) must sit as the very first line of execution on all PHP scripts.",
+      "Strictly enforce Eloquent Eager-Loading structures ('with()') on index feeds to avoid N+1 querying patterns completely.",
+      "Wrap all Unsplash and Postmark integrations inside robust resilience patterns (Guzzle Retry Middleware, Circuit Breaker design patterns).",
+      "Validate that Tailwind utility markup adheres completely to the Tailwind v4 design system, eliminating legacy styles.",
+      "Database transactions must wrap any service method executing write operations on more than one database table.",
+      "Strictly use PHP 8.4 property hooks where getters/setters require logical transformations, keeping model files clean and compact."
+    ]
+  }
+}
