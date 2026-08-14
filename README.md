@@ -1,18 +1,22 @@
 <div align="center">
-# 🚀 Chefsync Recipe Saas
-### *Modern, High-Performance Laravel 12 Solution & Developer Suite*
 
-<p align="center">
-  [![Architect](https://img.shields.io/badge/Architect-Hsini%20Mohamed-0055ff?style=for-the-badge&logo=github&logoColor=white)](https://hsini.dev)
-  [![Portfolio](https://img.shields.io/badge/Portfolio-hsini.dev-00c853?style=for-the-badge&logo=google-chrome&logoColor=white)](https://hsini.dev)
-  [![Language](https://img.shields.io/badge/Language-PHP-f59e0b?style=for-the-badge)](https://github.com/hsinidev)
-  [![Framework](https://img.shields.io/badge/Framework-Laravel%2012-6366f1?style=for-the-badge)](https://github.com/hsinidev)
-  [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-</p>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=0,2,2,5,30&height=180&section=header&text=Chefsync%20Recipe%20Saas&fontSize=42&fontColor=fff&animation=fadeIn&fontAlignY=38" width="100%" style="max-width: 100%; border-radius: 12px; margin-bottom: 20px;" alt="Chefsync Recipe Saas Header Banner" />
+
+  <h1>🚀 Chefsync Recipe Saas</h1>
+  <p><em>Modern, High-Performance Laravel 12 Solution & Developer Suite</em></p>
+
+  <p align="center">
+    <a href="https://hsini.dev"><img src="https://img.shields.io/badge/Architect-Hsini%20Mohamed-0055ff?style=for-the-badge&logo=github&logoColor=white" alt="Architect: Hsini Mohamed" /></a>
+    <a href="https://hsini.dev"><img src="https://img.shields.io/badge/Portfolio-hsini.dev-00c853?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Portfolio: hsini.dev" /></a>
+    <a href="https://github.com/hsinidev"><img src="https://img.shields.io/badge/Language-PHP-f59e0b?style=for-the-badge" alt="Language: PHP" /></a>
+    <a href="https://github.com/hsinidev"><img src="https://img.shields.io/badge/Framework-Laravel%2012-6366f1?style=for-the-badge" alt="Framework: Laravel 12" /></a>
+    <a href="https://github.com/hsinidev/ChefSync-Recipe-SaaS"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT" /></a>
+  </p>
 
 </div>
 
 ---
+
 ## 🌟 Executive Overview
 
 **Chefsync Recipe Saas** is a production-grade **PHP** platform engineered for high reliability, clean architectural separation, and frictionless developer workflow.
@@ -25,6 +29,7 @@
 - **Production Ready**: Built-in error resilience, validation, and structured logging.
 
 ---
+
 ## 🏗️ Architecture & Technology Stack
 
 - **Primary Language**: `PHP`
@@ -32,59 +37,6 @@
 - **Design Pattern**: Modular Clean Architecture / Domain-Driven Design
 - **License**: MIT Open Source Attribution
 
-## 📖 Deep-Dive Technical Documentation
-
-# ChefSync — Hyper-Scalable Multi-Tenant Recipe & Culinary Blog SaaS
-
-
-> **Live URL**: [https://recipes.hsini.dev](https://recipes.hsini.dev)
-> **Repository**: [https://github.com/hsinidev/ChefSync-Recipe-SaaS](https://github.com/hsinidev/ChefSync-Recipe-SaaS)
-
----
-
-## Description
-
-ChefSync is a production-ready, hyper-scalable multi-tenant SaaS platform for culinary blogs and recipe management. Features hybrid database tenancy (per-tenant isolated DB for enterprise + shared DB with row-level scoping for standard tier), Schema.org/Recipe JSON-LD SEO, dynamic ingredient portion scaler, and media processing pipeline.
-
----
-
-## Key Features
-
-- Hybrid tenancy model: isolated dedicated DB per enterprise tenant, shared DB with Global Query Scopes for standard tier
-- Dynamic tenant resolver with Redis Cache-Aside pool and AES-256-GCM encrypted connection config
-- Schema.org/Recipe JSON-LD SEO integration via RecipeSchemaService with Redis-cached output
-- Alpine.js powered real-time ingredient portion scaler with fraction formatting (e.g. 1.5 -> '1 1/2')
-- Async media processing pipeline: WebP conversion, 3 responsive sizes (Thumbnail/Card/Hero) via GD/Imagick
-- Multi-cluster Redis topology: sessions, application cache, and Laravel Horizon queue workers
-- Unsplash API integration with exponential backoff resilience and local fallback vectors
-- Postmark bulk newsletter dispatch with rate-limiting middleware (50 concurrent connections max)
-
----
-
-## Tech Stack
-
-- **Laravel 12 (PHP 8.4 strict types)**
-- **MySQL 8.4 (InnoDB, compound indexing)**
-- **Redis 7.2 (multi-cluster)**
-- **TailwindCSS v4**
-- **Alpine.js v3**
-- **Livewire**
-- **Laravel Horizon**
-- **Postmark**
-
----
-
-
-| Field | Info |
-|---|---|
-| **Name** | Hsini Mohamed |
-| **Website** | [https://hsini.dev](https://hsini.dev) |
-| **Email** | [contact@hsini.dev](mailto:contact@hsini.dev) |
-| **GitHub** | [https://github.com/hsinidev](https://github.com/hsinidev) |
-
----
-
----
 ## 🚀 Quick Start & Installation
 
 ### 1. Clone the Repository
